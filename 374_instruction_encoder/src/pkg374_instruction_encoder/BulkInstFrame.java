@@ -7,6 +7,8 @@ package pkg374_instruction_encoder;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.HashMap;
@@ -326,117 +328,47 @@ public class BulkInstFrame extends javax.swing.JFrame {
                     String curlineComment = "";
                     String outputComment = "";
 
-                    //first check if the current line is just empty
-                    if ( curline.equals("") || curline.equals("\n") ) {
-                        output.add(curline);
+                    if (curline.equals("")){
+                        //empty line so just pass it through
+                        output.add("");
                         continue;
                     }
 
-                    //index of first '/' marking the beginning of the comment
-                    int commentIndx = curline.indexOf("//");
-                    int lastCharInInstIndx = -1;
-                    boolean thereAreComments = commentIndx != -1;
+                    //use regex to parse instruction and comments
+                    Pattern r = Pattern.compile("(.*) *//(.*)");
+                    Matcher m = r.matcher(curline);
+                    boolean thereAreComments = m.find();
 
                     if (thereAreComments){
-                        if ( commentIndx == 0 ) {
-                            //if the whole line is a comment, then we just pass the comment through
-                            output.add(curline);
-                            continue;
-                        }
-
-                        //get the index of the last character in the instruction to be encoded
-                        //go backwards starting from the comment index until we hit a non space character
-                        boolean charIsNotASpace = false;
-                        lastCharInInstIndx = commentIndx;
-                        while ( !charIsNotASpace && lastCharInInstIndx != -1 ){
-                            if ( curline.charAt(--lastCharInInstIndx) != ' ') charIsNotASpace = true;
-                        }
-
-                    } else {
-                        //there are no comments in the line
-                        //so its just non encoded instruction
-                        lastCharInInstIndx = curline.length() - 1;
+                        //there is instruction and comment or there is only comment
+                        curlineInst = m.group(1).strip();
+                        curlineComment = m.group(2).strip();
+                    } else{
+                        //there is only instruction
+                        curlineInst = curline;
                     }
 
-                    //get the comment and instruction strings
-                    curlineInst = curline.substring(0, lastCharInInstIndx+1);
-                    curlineComment = curline.substring(commentIndx+2);
+                    //if the line is only a comment we should pass it through to the output
+                    if ( curlineInst.equals("") ){
+                        if (thereAreComments){
+                            output.add("//"+curlineComment);
+                        }
+                        continue;
+                    }
+
 
                     //determine our output comment
-
-                    //user wants no instruction or user comments
-                    if(!includeInst.isSelected() && !includeComments.isSelected()) outputComment = "";
+                    //user wants both instruction and user comments
+                    if(includeInst.isSelected() && includeComments.isSelected()) outputComment = curlineInst + ((curlineComment.equals("")) ? "" : ", "+curlineComment);
 
                     //user wants only instruction comments
-                    else if(includeInst.isSelected() && !includeComments.isSelected()) outputComment = "// "+ curlineInst;
+                    else if(includeInst.isSelected() && !includeComments.isSelected()) outputComment = curlineInst;
 
                     //user wants only user comments
-                    else if(!includeInst.isSelected() && includeComments.isSelected()) outputComment = "// " + curlineComment;
-
-                    //user wants both instruction and user comments
-                    else outputComment = "// " + curlineInst + ", " + curlineComment;
+                    else if(!includeInst.isSelected() && includeComments.isSelected()) outputComment = curlineComment;
 
                     //now encode the instruction and add the output line
-                    output.add( parseAndEncode(curlineInst) +  ((outputComment.equals("")) ? "" : " " + outputComment ) );
-
-                    // if(curline.substring(0,2).equals("//") || curline.equals("\n")){
-                    //     //line begins with comments so just set that line as the final output
-                    //     //since nothing to encode
-                    //     rez = curline;
-                    // } else{
-                    //     //line may or may not have comments
-                    //     //check if the line has comments e.g. <some instruction> // <some comment>
-                    //     int comIndx = curline.indexOf("//");
-                    //     boolean isASpace = true;
-                        
-                    //     //loop will run if there is a comment on the line
-                    //     //will break at the index of the last character in the instruction
-                    //     //e.g. for ld ra, rb, c //some comment
-                    //     //comindx will be the index of c
-                    //     while(isASpace && comIndx != -1){
-                    //         if(curline.charAt(--comIndx) != ' ') isASpace = false;
-                    //     }
-
-                    //     // index of the last character of the instruction to be encoded
-                    //     // used for parsing between instructions and comments
-                    //     int lastCurInstCharIndx = 0;
-
-                    //     comments = "";
-                    //     //case for if it has comments or not
-                    //     if(comIndx == -1) {
-                    //         //no comments on the line
-                    //         lastCurInstCharIndx = curline.length()-1;
-                            
-                    //         //only comments will be if the user wanted the input instruction as a comment
-                    //         if(includeInst.isSelected()) comments = " //"+curline;
-                    //     } else{
-                    //         //for the case where there are comments
-                    //         lastCurInstCharIndx = comIndx;
-                    //         String curlineInst = curline.substring(0,lastCurInstCharIndx+1);
-                    //         String curlineComments = curline.substring(curline.indexOf("//")+2)
-
-                    //         //user wants no instruction or user comments
-                    //         if(!includeInst.isSelected() && !includeComments.isSelected()) comments = "";
-                            
-                    //         else if(includeInst.isSelected() && !includeComments.isSelected()){
-                    //             //we are including instructions but not comments
-                    //             comments = " //" + curlineInst;
-                    //         } else if(!includeInst.isSelected() && includeComments.isSelected()){
-                    //             //not including instructions but including comments
-                    //             comments = " //" + curlineComments;
-                    //         } else{
-                    //             //including both instructions and comments
-                    //             comments = " //" + curlineInst + " -- " + curlineComments;
-                    //         }
-                            
-                    //     }
-                        
-                    //     inst = curline.substring(0,lastSrcStrCharIndx+1);
-                    //     //System.out.println(inst+"...");
-                    //     rez = parseAndEncode(inst)+comments;
-                    // }
-                    // output.add(rez);
-                    // line++;
+                    output.add( parseAndEncode(curlineInst) +  ((outputComment.equals("")) ? "" : " //" + outputComment ) );
                 }
 
                 setOutput(output);

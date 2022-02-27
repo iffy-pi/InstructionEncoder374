@@ -315,6 +315,7 @@ public class InstEncoder {
             unused = unused-4;
         }
         
+        //case ld Ra, 2(Rb), we default rb to 0
         if(name.equals("ld") || name.equals("ldi") || name.equals("st")){
             if(unused == 23){
                 full = full + "0000";

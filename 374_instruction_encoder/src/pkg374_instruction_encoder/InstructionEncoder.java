@@ -35,13 +35,13 @@ public class InstructionEncoder {
     private HashMap<String, String> instrOpcodes;
     private HashMap<String, String> branchInstrCodes;
 
-    private void initInfo(){
+    public void initInfo(){
         initInstrRegexes();
         initInstructionGroups();
         initInstrCodes();
     }
 
-    private static String getGroupStr(InstructionType g){
+    private String getGroupStr(InstructionType g){
         HashMap<InstructionType, String> groupStrings = new HashMap<InstructionType, String>();
         groupStrings.put(InstructionType.THREE_REGS, "THREE_REGS");
         groupStrings.put(InstructionType.TWO_REGS, "TWO_REGS");
@@ -70,7 +70,7 @@ public class InstructionEncoder {
         HashMap<String, String> regexReplacements = new HashMap<String, String>();
         regexReplacements.put("<inst>", "(inst)");
         regexReplacements.put("<reg>", "([rR][0-9]*)");
-        regexReplacements.put("<imm>", "(\\$[0-9]*[a-f]*[A-F]*[0-9]*|[0-9]*)");
+        regexReplacements.put("<imm>", "(\\$[0-9]*[a-f]*[A-F]*[0-9]*|-*[0-9]*)");
 
 
         for ( InstructionType k : instRegexFormats.keySet()) {
@@ -147,6 +147,41 @@ public class InstructionEncoder {
         return InstructionType.UNKNOWN_TYPE;
     }
 
+    public String getInstrFormat(String instName){
+        InstructionType type = getInstrType(instName);
+        String res = instName + " ";
+        switch(type){
+            case THREE_REGS:
+                res += "Ra, Rb, Rc";
+                break;
+            case TWO_REGS:
+                res += "Ra, Rb";
+                break;
+            case ONE_REGS:
+                res += "Ra";
+                break;
+            case NO_OPS:
+                res = instName;
+                break;
+            case TWO_REGS_AND_IMMEDIATE:
+                res += "Ra, Rb, C";
+                break;
+            case ONE_REGS_AND_IMMEDIATE:
+                res += "Ra, C";
+                break;
+            case LD_SPECIAL_CASE:
+                res = "'ld Ra, C' or 'ld Ra, C(Rb)'";
+                break;
+            case ST_SPECIAL_CASE:
+                res = "'st C, Ra' or 'st C(Rb), Ra'";
+                break;
+            default:
+                res = "Unknown Instruction";
+                break;
+        }
+        return res;
+    }
+
     private String makePartsStr(String[] instrParts){
         String a_str = "Instruction: (" + instrParts[0] + ")" + "\n";
         a_str += "Ra: ("+instrParts[1] + ")" + "\n";
@@ -200,17 +235,6 @@ public class InstructionEncoder {
 
         return hexStr;
     }
-
-    // public static String convertNumberToBase(String numStr, int inputBase, int outputBase, int length){
-    //     //first convert the number into the int
-    //     int decimal_number = Integer.parseInt(numStr, inputBase);
-
-    //     String outputNumStr = Integer.toString(decimal_number, outputBase);
-
-    //     return "";
-    // }
-
-
 
     private String makeInstructionFromParts(String[] instrParts, int outputBase) throws InstException{
         //takes the input instruction parts and makes the output in the specified base
@@ -539,33 +563,11 @@ public class InstructionEncoder {
         }
     }
 
-    public static void parseComments(String strIn){
-        String code = "";
-        String comment = "";
-
-        //check if there any comments
-        String comment_regex = "(.*) *//(.*)";
-
-        Pattern r = Pattern.compile(comment_regex);
-        Matcher m = r.matcher(strIn);
-
-
-        if (m.find()){
-            //there is code and comment or there is only comment
-            code = m.group(1).strip();
-            comment = m.group(2).strip();
-        } else{
-            //there is only code
-            code = strIn.strip();
-        }
-
-        print("Code: ["+code+"]");
-        print("Comment: ["+comment+"]");
-    }
-
     public static void my_main(){
-        run_tests();
-        //test_encoder("addi R7, R6, $27");
+        //run_tests();
+        //test_encoder("addi R7, R6, -27");
+        InstructionEncoder ie = new InstructionEncoder();
+        print(ie.getInstrFormat("has"));
         // String cc = "jal Ra      //m comement is this  ";
         // String onlyc = " //fefiejfiejejf";
         // String onlyd = "jal RAAFCAC ";

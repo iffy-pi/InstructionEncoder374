@@ -20,8 +20,8 @@ public class Main {
         
         
         //InstFrame_1 isf = new InstFrame_1();
-        //BulkInstFrame bf = new BulkInstFrame();
-        InstructionEncoder.my_main();
+        BulkInstFrame bf = new BulkInstFrame();
+        //InstructionEncoder.my_main();
         
         //String test = "ldi R4, 5";
         //parseInstruction(test);

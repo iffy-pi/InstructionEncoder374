@@ -25,41 +25,12 @@ public class BulkInstFrame extends javax.swing.JFrame {
      * 
      * 
      */
-    HashMap<String, String> instFormats = new HashMap<String, String>();
+    InstructionEncoder instrEncoder;
     public BulkInstFrame() {
         initComponents();
         setLocationRelativeTo(null);
         setVisible(true);
-        instFormats.put("add",      "add Ra, Rb, Rc");
-        instFormats.put("sub",      "sub Ra, Rb, Rc");
-        instFormats.put("shr",      "shr Ra, Rb, Rc");
-        instFormats.put("shl",      "shl Ra, Rb, Rc");
-        instFormats.put("ror",      "ror Ra, Rb, Rc");
-        instFormats.put("rol",      "rol Ra, Rb, Rc");
-        instFormats.put("and",      "and Ra, Rb, Rc");
-        instFormats.put("or",       "or Ra, Rb, Rc");
-        instFormats.put("addi",     "addi Ra, Rb, C");
-        instFormats.put("andi",     "andi Ra, Rb, C");
-        instFormats.put("ori",      "ori Ra, Rb, C");
-        instFormats.put("mul",      "mul Ra, Rb");
-        instFormats.put("div",      "div Ra, Rb");
-        instFormats.put("neg",      "neg Ra, Rb");
-        instFormats.put("not",      "not Ra, Rb");
-        instFormats.put("jr",       "jr Ra");
-        instFormats.put("jal",      "jal Ra");
-        instFormats.put("in",       "in Ra");
-        instFormats.put("out",      "out Ra");
-        instFormats.put("mfhi",     "mfhi Ra");
-        instFormats.put("mflo",     "mflo Ra");
-        instFormats.put("nop",      "nop");
-        instFormats.put("halt",     "halt");
-        instFormats.put("ld",       "ld Ra, C     <OR>     ld Ra, C(Rb)");
-        instFormats.put("st",       "st C, Ra     <OR>     st C(Rb), Ra");
-        instFormats.put("brzr",     "brzr Ra, C");
-        instFormats.put("brnz",     "brnz Ra, C");
-        instFormats.put("brpl",     "brpl Ra, C");
-        instFormats.put("brmi",     "brmi Ra, C");
-        
+        instrEncoder = new InstructionEncoder();
         outputArea.setText(getInfo());
         
     }
@@ -82,233 +53,6 @@ public class BulkInstFrame extends javax.swing.JFrame {
                         
     }
         
-    public String encode( String instNameIn, String[] regsIn, String Cin) throws Exception{
-        //retrieve the data from the fields
-        String instname = instNameIn;
-        String result = "";
-        int count = 0;
-       
-        
-        String ratext = regsIn[0].toLowerCase();
-        String rbtext = regsIn[1].toLowerCase();
-        String rctext = regsIn[2].toLowerCase();
-        
-        
-        String Cout = Cin;
-        
-        if(instname.equals("jal")){
-            //this is the special case for jal
-            //second register is r15
-            //immediate value is 1
-            rbtext = "r15";
-            Cout = "1";
-        }
-        
-        boolean instNameEmpty = instname.equals("");
-        boolean raEmpty = ratext.equals("");
-        boolean rbEmpty = rbtext.equals("");
-        boolean rcEmpty = rctext.equals("");
-        
-        try{
-            
-            if(instNameEmpty){
-                throw new InstException("Empty Instruction!");
-            } else{
-                if(raEmpty&&rbEmpty&&rcEmpty && !instname.equals("nop") && !instname.equals("halt")){
-                    throw new InstException("This instruction has at least one register argument");
-
-                } else{
-
-                    if(!raEmpty) count++; //System.out.println("here");
-                    if(!rbEmpty) count++; //System.out.println("here");
-                    if(!rcEmpty) count++; //System.out.println("here");
-
-
-
-                    if(ratext.length() >0 && ratext.charAt(0) == 'r'){
-                        ratext = ratext.substring(1);
-                        //showMessageDialog(this,"what gives: "+ratext);
-                    }
-
-                    if(rbtext.length() >0 && rbtext.charAt(0) == 'r') rbtext = rbtext.substring(1);
-                    if(rctext.length() >0 && rctext.charAt(0) == 'r') rctext = rctext.substring(1);
-
-                    String[] arr = new String[count];
-                    if(count==1 || count==2 || count==3) arr[0] = ratext; 
-                    if(count==2 || count == 3) arr[1] = rbtext;
-                    if(count == 3) arr[2] = rctext;
-
-
-                    //String Cout = Cin;
-
-                    int baseout=2;
-                    String choice = HBCombo.getSelectedItem().toString();
-                    switch(choice){
-                        case "Hex":
-                            baseout = 16;
-                            break;
-                        case "Binary":
-                            baseout = 2;
-                            break;
-                    }
-                   
-                    result = InstEncoder.encode(instname,arr,Cout,baseout);
-                }     
-            }
-        } catch(Exception e){
-            throw new Exception ("Encoder Error: "+e.getMessage());
-        }
-        
-        return result;
-    }
-    
-    public String parseAndEncode(String textIn) throws Exception{
-        //how many register operands are in a given instruction
-        HashMap<String, String> parsingInfo = new HashMap<String, String>();
-        parsingInfo.put("add",     "3");
-        parsingInfo.put("sub",     "3");
-        parsingInfo.put("shr",     "3");
-        parsingInfo.put("shl",     "3");
-        parsingInfo.put("ror",     "3");
-        parsingInfo.put("rol",     "3");
-        parsingInfo.put("and",     "3");
-        parsingInfo.put("or",      "3");
-        parsingInfo.put("addi",    "*2");
-        parsingInfo.put("andi",    "*2");
-        parsingInfo.put("ori",     "*2");
-        parsingInfo.put("mul",     "2");
-        parsingInfo.put("div",     "2");
-        parsingInfo.put("neg",     "2");
-        parsingInfo.put("not",     "2");
-        parsingInfo.put("jr",      "1");
-        parsingInfo.put("jal",     "1");
-        parsingInfo.put("in",      "1");
-        parsingInfo.put("out",     "1");
-        parsingInfo.put("mfhi",    "1");
-        parsingInfo.put("mflo",    "1");
-        parsingInfo.put("nop",     "0");
-        parsingInfo.put("halt",    "0");
-        parsingInfo.put("ld",      "!1");
-        parsingInfo.put("ldi",     "!1");
-        parsingInfo.put("st",      "&");
-        parsingInfo.put("brzr",    "*1");
-        parsingInfo.put("brnz",    "*1");
-        parsingInfo.put("brpl",    "*1");
-        parsingInfo.put("brmi",    "*1");
-         
-        String instruction = "", Ra ="", Rb ="", Rc="", Cout = "";
-
-        //RegArray[0] is Ra, regArray[1] is Rb, regArray[2] is Rc
-        String[] regArray = {"", "", ""};
-        String result = "";
-         
-        try{
-            //obtain instruction first
-            String[] spaceSplitText = textIn.split(" ");
-
-            //obtain instruction first
-            String instName = spaceSplitText[0];
-            instruction = instName;
-
-            //use parsingInfo to tell us how much we are parsing from the
-            String parseValue = parsingInfo.get(instName);
-            String numImmediateOps;
-            int k=0, j=0;
-            int numOfRegOps = 0, imOps = 0;
-            String[] brackSplit;
-            switch(parseValue.charAt(0)){
-                case '*':
-                    //this is the case for immediate
-                    //in all cases we have 2 register operands and the immediate at the end
-                    numOfRegOps = Integer.parseInt(parseValue.substring(1));
-                    k = 0;
-
-                    //get the register operands
-                    for(int i=0; i < numOfRegOps; i++ ){
-                        //get the register operands without the commas
-                        //instruction takes one space
-                        regArray[i] = regArray[i] = spaceSplitText[i+1].substring(0, spaceSplitText[i+1].length()-1);
-                    }
-
-                    //get the immediate value
-                    //then retrieve the Cout value
-                    Cout = spaceSplitText[numOfRegOps+1];
-                    break;
-
-                case '&':
-                    //st C, Ra     <OR>     st C(Rb), Ra
-                    if(textIn.indexOf("(") == -1){
-                        //then we have standard case
-
-                        regArray[0] = spaceSplitText[2];
-
-                        Cout = spaceSplitText[1].substring(0, spaceSplitText[1].length()-1);
-
-                    } else{
-                        //bracket case
-                        regArray[0] = spaceSplitText[2];
-
-                        brackSplit = spaceSplitText[1].split("\\(");
-
-                        Cout= brackSplit[0];
-                        regArray[1] = brackSplit[1].substring(0, brackSplit[1].length() -2);
-                    }
-                    break;
-
-                case '!':
-                    //ld Ra, C     <OR>     ld Ra, C(Rb)
-                    if(textIn.indexOf("(") == -1){
-                        //then we have standard case
-                        regArray[0] = spaceSplitText[1].substring(0, spaceSplitText[1].length()-1);
-
-                        Cout = spaceSplitText[2];
-
-                    } else{
-                        //bracket case
-                        regArray[0] = spaceSplitText[1].substring(0, spaceSplitText[1].length()-1);
-                        brackSplit = spaceSplitText[2].split("\\(");
-
-                        Cout= brackSplit[0];
-                        regArray[1] = brackSplit[1].substring(0, brackSplit[1].length() -1);
-                    }
-                    break;
-
-                default:
-                    //if this is the case, then we are only parsing reg ops
-                    numOfRegOps = Integer.parseInt(parseValue);
-                    k = 0;
-                   // //System.out.println("numOfRegOps: "+numOfRegOps);
-
-                    for(int i=1; i<numOfRegOps+1 && i<spaceSplitText.length; i++ ){
-                        //System.out.println(spaceSplitText[i]);
-                        if(i == numOfRegOps) regArray[k] = spaceSplitText[i].substring(0, spaceSplitText[i].length());
-                        else regArray[k] = spaceSplitText[i].substring(0, spaceSplitText[i].length()-1);
-                        k++;
-                    }
-
-                    break;
-            }
-
-            //Ra = regArray[1]
-//            instruction = (instruction.equals("")) ? "NULL" : instruction;
-//            regArray[0] = (regArray[0].equals("")) ? "NULL" : regArray[0];
-//            regArray[1] = (regArray[1].equals("")) ? "NULL" : regArray[1];
-//            regArray[2] = (regArray[2].equals("")) ? "NULL" : regArray[2];
-//            Cout = (Cout.equals("")) ? "NULL" : Cout;
-//            System.out.println("Instruction Name: "+instruction);
-//            System.out.println("Ra: "+regArray[0]);
-//            System.out.println("Rb: "+regArray[1]);
-//            System.out.println("Rc: "+regArray[2]);
-//            System.out.println("Cout: "+Cout);
-
-            result = encode(instruction, regArray, Cout);
-        } catch(Exception e){
-            throw new Exception("Parser Error: "+e.getMessage());
-        }
-        
-        return result;
-    }
-    
     public void bulkEncode(){
         
         //String men = "add r1, r2, r3\nldi r6, $29(r7)";
@@ -368,7 +112,15 @@ public class BulkInstFrame extends javax.swing.JFrame {
                     else if(!includeInst.isSelected() && includeComments.isSelected()) outputComment = curlineComment;
 
                     //now encode the instruction and add the output line
-                    output.add( parseAndEncode(curlineInst) +  ((outputComment.equals("")) ? "" : " //" + outputComment ) );
+                    String encoded_instr = "";
+                    try{
+                        encoded_instr = instrEncoder.encodeInstruction(curlineInst);
+                        output.add( encoded_instr +  ((outputComment.equals("")) ? "" : " //" + outputComment ) );
+                    } catch (InstException e){
+                        //if an exception occured, add the curlineInst as a comment with the exception message
+
+                        output.add("//ENCODING ERROR: "+curlineInst +", "+e.getMessage() );
+                    }
                 }
 
                 setOutput(output);
@@ -404,15 +156,8 @@ public class BulkInstFrame extends javax.swing.JFrame {
        outputArea.setText(getInfo());
     }
     
-    public void setFormat(){
-        Object val = instFormats.get(nameField.getText().split(" ")[0]);
-        
-        if(val==null){
-            formatField.setText("Unknown Instruction");
-        }
-        else{
-            formatField.setText(val.toString());
-        }
+    public void setInstrFormat(){
+        formatField.setText( instrEncoder.getInstrFormat(nameField.getText().split(" ")[0]));
     }
     
 
@@ -670,7 +415,7 @@ public class BulkInstFrame extends javax.swing.JFrame {
 
     private void nameFieldKeyReleased(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_nameFieldKeyReleased
         // TODO add your handling code here:
-        setFormat();
+        setInstrFormat();
     }//GEN-LAST:event_nameFieldKeyReleased
 
     private void includeCommentsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_includeCommentsActionPerformed

@@ -563,23 +563,4 @@ public class InstructionEncoder {
         }
     }
 
-    public static void my_main(){
-        //run_tests();
-        //test_encoder("addi R7, R6, -27");
-        InstructionEncoder ie = new InstructionEncoder();
-        print(ie.getInstrFormat("has"));
-        // String cc = "jal Ra      //m comement is this  ";
-        // String onlyc = " //fefiejfiejejf";
-        // String onlyd = "jal RAAFCAC ";
-        // parseComments(onlyd);
-        //print(decimalToBinary(2, 5));
-
-        // String num = "77";
-        // int decimal = Integer.parseInt(num, 8);
-        // print("This is decimal: "+decimal);
-
-        // int d = -2174;
-        // print(Integer.toString(d, 2));
-    }
-
 }

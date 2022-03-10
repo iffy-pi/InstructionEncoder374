@@ -37,7 +37,7 @@ public class BulkInstFrame extends javax.swing.JFrame {
     
     public String getInfo(){
         return "Type in instructions separated by newlines:\n"
-                       +"ldi r8, $27(r15)\n"
+                       +"ld r8, $27(r15)\n"
                        +"add r6, r7, r1\n\n"
                        +"And they will be encoded and displayed\nin the order they appear:\n"
                        +"0C780027\n" +

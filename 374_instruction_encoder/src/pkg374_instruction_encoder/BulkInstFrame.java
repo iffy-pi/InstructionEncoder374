@@ -36,20 +36,28 @@ public class BulkInstFrame extends javax.swing.JFrame {
     }
     
     public String getInfo(){
-        return "Type in instructions separated by newlines:\n"
-                       +"ld r8, $27(r15)\n"
-                       +"add r6, r7, r1\n\n"
-                       +"And they will be encoded and displayed\nin the order they appear:\n"
-                       +"0C780027\n" +
-                        "1B388000\n\n"+
-                       "Use // for comments e.g.\n"+
-                       "ldi r8, $27(r15)//for my code\n"+
-                       "//ORG 0:\n\n"+
-                       "Machine Encoding Translation:\n"+
-                       "0C780027 //for my code\n"+
-                       "//ORG 0:\n\n"+
-                       "Checkbox option removes all\nappended comments\n"
-                + "Not comment lines (ie beginning with //)";
+        return "Type in instructions separated by newlines:\n"+
+                "ld r8, $27(r15)\n"+
+                "add r6, r7, r1\n\n"+
+
+                "And they will be encoded and displayed\nin the order they appear:\n"+
+                "0C780027\n" +
+                "1B388000\n\n"+
+
+                "Use ; for comments\n"+
+                "For lines that are only comments (beginning with ;), they will be just be passed through to output.\n"+
+                "For example:\n" +
+                ";ORG 0:\n"+
+                "ldi r8, $27(r15);for my code\n\n"+
+
+                "Machine Encoding Translation:\n"+
+                "ORG 0:\n"+
+                "0C780027 ;for my code\n\n"+
+
+                "Checkbox option removes all appended comments, not comment lines (ie beginning with ;)\n\n"+
+
+                "This message will disappear once you encode instructions\n"+
+                "See again using Clear button";
                         
     }
         
@@ -57,6 +65,7 @@ public class BulkInstFrame extends javax.swing.JFrame {
         
         //String men = "add r1, r2, r3\nldi r6, $29(r7)";
         int lineCnt = 0;
+        String commentChar = ";";
         if(inputArea.getText().equals("")){
             showMessageDialog(this, "No instruction to encode");
         } else{
@@ -79,7 +88,7 @@ public class BulkInstFrame extends javax.swing.JFrame {
                     }
 
                     //use regex to parse instruction and comments
-                    Pattern r = Pattern.compile("(.*) *//(.*)");
+                    Pattern r = Pattern.compile("(.*) *"+commentChar+"(.*)");
                     Matcher m = r.matcher(curline);
                     boolean thereAreComments = m.find();
 
@@ -95,7 +104,7 @@ public class BulkInstFrame extends javax.swing.JFrame {
                     //if the line is only a comment we should pass it through to the output
                     if ( curlineInst.equals("") ){
                         if (thereAreComments){
-                            output.add("//"+curlineComment);
+                            output.add(curlineComment);
                         }
                         continue;
                     }
@@ -114,12 +123,16 @@ public class BulkInstFrame extends javax.swing.JFrame {
                     //now encode the instruction and add the output line
                     String encoded_instr = "";
                     try{
-                        encoded_instr = instrEncoder.encodeInstruction(curlineInst);
-                        output.add( encoded_instr +  ((outputComment.equals("")) ? "" : " //" + outputComment ) );
+                        if (HBCombo.getSelectedItem().toString().equals("Binary")){
+                            encoded_instr = instrEncoder.encodeInstruction(curlineInst, 2);
+                        } else {
+                           encoded_instr = instrEncoder.encodeInstruction(curlineInst);
+                        }
+                        output.add( encoded_instr +  ((outputComment.equals("")) ? "" : " "+commentChar + outputComment ) );
                     } catch (InstException e){
                         //if an exception occured, add the curlineInst as a comment with the exception message
 
-                        output.add("//ENCODING ERROR: "+curlineInst +", "+e.getMessage() );
+                        output.add(commentChar+"ENCODING ERROR: "+curlineInst +", "+e.getMessage() );
                     }
                 }
 
@@ -157,7 +170,7 @@ public class BulkInstFrame extends javax.swing.JFrame {
     }
     
     public void setInstrFormat(){
-        formatField.setText( instrEncoder.getInstrFormat(nameField.getText().split(" ")[0]));
+        formatField.setText( instrEncoder.getInstrFormat(nameField.getText().toLowerCase().split(" ")[0]));
     }
     
 
@@ -237,6 +250,11 @@ public class BulkInstFrame extends javax.swing.JFrame {
 
         inputArea.setColumns(20);
         inputArea.setRows(5);
+        inputArea.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                inputAreaMouseClicked(evt);
+            }
+        });
         jScrollPane2.setViewportView(inputArea);
 
         outputArea.setEditable(false);
@@ -279,7 +297,7 @@ public class BulkInstFrame extends javax.swing.JFrame {
             }
         });
 
-        includeInst.setText("Include Instructions");
+        includeInst.setText("Instruction Comments");
         includeInst.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 includeInstActionPerformed(evt);
@@ -306,21 +324,26 @@ public class BulkInstFrame extends javax.swing.JFrame {
                                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                                     .addGroup(layout.createSequentialGroup()
                                         .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 234, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 22, Short.MAX_VALUE)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                                            .addGroup(layout.createSequentialGroup()
+                                                .addGap(0, 10, Short.MAX_VALUE)
                                                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                                    .addComponent(encodeBtn, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 148, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                    .addComponent(clearBtn, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 148, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                    .addComponent(includeComments, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 148, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                    .addComponent(includeInst, javax.swing.GroupLayout.PREFERRED_SIZE, 146, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                                .addGap(20, 20, 20))
-                                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                                                .addComponent(HBCombo, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                .addGap(67, 67, 67))
-                                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                                                .addComponent(jLabel7)
-                                                .addGap(42, 42, 42)))))
+                                                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                                                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                                            .addComponent(encodeBtn, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 148, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                            .addComponent(clearBtn, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 148, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                            .addComponent(includeComments, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 148, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                                        .addGap(20, 20, 20))
+                                                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                                                        .addComponent(HBCombo, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                        .addGap(67, 67, 67))
+                                                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                                                        .addComponent(jLabel7)
+                                                        .addGap(42, 42, 42))))
+                                            .addGroup(layout.createSequentialGroup()
+                                                .addComponent(includeInst, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)))))
                                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                     .addComponent(jLabel2)
                                     .addComponent(jScrollPane4, javax.swing.GroupLayout.PREFERRED_SIZE, 245, javax.swing.GroupLayout.PREFERRED_SIZE))
@@ -358,9 +381,10 @@ public class BulkInstFrame extends javax.swing.JFrame {
                     .addComponent(jLabel3)
                     .addComponent(jLabel2))
                 .addGap(8, 8, 8)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jScrollPane4, javax.swing.GroupLayout.DEFAULT_SIZE, 261, Short.MAX_VALUE)
-                    .addComponent(jScrollPane2)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                        .addComponent(jScrollPane4, javax.swing.GroupLayout.DEFAULT_SIZE, 261, Short.MAX_VALUE)
+                        .addComponent(jScrollPane2))
                     .addGroup(layout.createSequentialGroup()
                         .addGap(19, 19, 19)
                         .addComponent(jLabel7)
@@ -425,6 +449,11 @@ public class BulkInstFrame extends javax.swing.JFrame {
     private void includeInstActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_includeInstActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_includeInstActionPerformed
+
+    private void inputAreaMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_inputAreaMouseClicked
+        // TODO add your handling code here:
+        
+    }//GEN-LAST:event_inputAreaMouseClicked
 
     /**
      * @param args the command line arguments

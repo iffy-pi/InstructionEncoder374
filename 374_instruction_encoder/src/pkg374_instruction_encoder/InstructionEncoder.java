@@ -8,10 +8,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.HashMap;
 import java.util.Arrays;
-
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.util.Scanner;
 /**
  *
  * @author omnic
@@ -64,7 +60,7 @@ public class InstructionEncoder {
         instRegexFormats.put(InstructionType.TWO_REGS_AND_IMMEDIATE, "<inst> *<reg> *, *<reg> *, *<imm>");
         instRegexFormats.put(InstructionType.ONE_REGS_AND_IMMEDIATE, "<inst> *<reg> *, *<imm>");
         instRegexFormats.put(InstructionType.NO_OPS, "<inst> *");
-        instRegexFormats.put(InstructionType.LD_SPECIAL_CASE, "(ld) *<reg> *, *<imm> *(\\(<reg>\\))*");
+        instRegexFormats.put(InstructionType.LD_SPECIAL_CASE, "<inst> *<reg> *, *<imm> *(\\(<reg>\\))*");
         instRegexFormats.put(InstructionType.ST_SPECIAL_CASE, "(st) *<imm> *(\\(<reg>\\))* *, *<reg>");
 
         HashMap<String, String> regexReplacements = new HashMap<String, String>();
@@ -78,7 +74,6 @@ public class InstructionEncoder {
             for ( String symbol : regexReplacements.keySet() ) {
                 regvalue = regvalue.replace(symbol, regexReplacements.get(symbol));
             }
-            //print(getGroupStr(k)+ ": " + regvalue);
             instRegexFormats.put(k, regvalue);
         }
     }
@@ -91,7 +86,7 @@ public class InstructionEncoder {
         instructionGroups.put(InstructionType.TWO_REGS_AND_IMMEDIATE, new String[]{"andi", "addi", "ori"});
         instructionGroups.put(InstructionType.ONE_REGS_AND_IMMEDIATE, new String[]{"brzr", "brnz", "brpl", "brmi"});
         instructionGroups.put(InstructionType.NO_OPS, new String[]{"nop", "halt"});
-        instructionGroups.put(InstructionType.LD_SPECIAL_CASE, new String[]{"ld"});
+        instructionGroups.put(InstructionType.LD_SPECIAL_CASE, new String[]{"ld", "ldi"});
         instructionGroups.put(InstructionType.ST_SPECIAL_CASE, new String[]{"st"});
     }
 
@@ -170,7 +165,7 @@ public class InstructionEncoder {
                 res += "Ra, C";
                 break;
             case LD_SPECIAL_CASE:
-                res = "'ld Ra, C' or 'ld Ra, C(Rb)'";
+                res = "'" + instName + " Ra, C' or '" + instName + " Ra, C(Rb)'";
                 break;
             case ST_SPECIAL_CASE:
                 res = "'st C, Ra' or 'st C(Rb), Ra'";
@@ -200,6 +195,9 @@ public class InstructionEncoder {
 
     public static String decimalToBinary(Long number, int length){
         String padding_bit = (number >= 0) ? "0" : "1";
+
+        //get binary value for number
+        //if number is negative, it is padded with excess 1s
         String binStr = Long.toBinaryString(number);
 
         if (length != 0 && binStr.length() != length){
@@ -218,7 +216,10 @@ public class InstructionEncoder {
     }
 
     public static String decimalToHex(Long number, int length){
-        String padding_bit = (number >= 0) ? "0" : "F";
+        String padding_bit = (number >= 0) ? "0" : "f";
+
+        //get hex for number
+        //if number is negative, it is padded with extra fs
         String hexStr = Long.toHexString(number);
 
         if (length != 0 && hexStr.length() != length){
@@ -316,8 +317,9 @@ public class InstructionEncoder {
         }
 
         //special behaviour for load and store
-        if ( instrParts[0].equals("ld") || instrParts[0].equals("st")){
-            //if there is no rb, the default is adding to r0
+        InstructionType type = getInstrType(instrParts[0]); 
+        if (  type == InstructionType.LD_SPECIAL_CASE || type == InstructionType.ST_SPECIAL_CASE  ){
+            //if there is no rb, the default is adding to r0 for load and store
             if ( instrParts[2].equals("") ) instrParts[2] = "r0";
         }
 
@@ -353,7 +355,7 @@ public class InstructionEncoder {
         if (instr.equals("")){
             throw new InstException(et);
         } else {
-            throw new InstException("Could Not Parse Instruction: " + instr, et);
+            throw new InstException("Could Not Parse Instruction: '" + instr + "'", et);
         }
     }
 
@@ -374,10 +376,6 @@ public class InstructionEncoder {
 
         String[] groups = getMatchedGroups(instructionStr, parseRegex, curType);
 
-        // print("GROUPS:");
-        // for (String g : groups){
-        //     print("==>"+g+"<==");
-        // }
 
         if (groups.length == 0) cannotParseInstruction(instructionStr, InstException.ErrorType.PARSING_BAD_FORMAT);
 
@@ -456,7 +454,7 @@ public class InstructionEncoder {
         }
 
         else if ( curType == InstructionType.LD_SPECIAL_CASE ){
-            //ld Ra, C or ld Ra, C(Rb)
+            //ld Ra, C or ld Ra, C(Rb) (applies for ldi as well)
             //groups could be [inst, Ra, C, "", ""] and [inst, Ra, C, (Rb), Rb]
 
             //ra and c must always be present, raise exception if they are not
@@ -499,10 +497,6 @@ public class InstructionEncoder {
         return makeInstructionFromParts(instrParts, outputBase);
     }
 
-    public static void print(String in){
-        System.out.println(in);
-    }
-
     public String encodeInstruction(String instructionStr, int outputBase) throws InstException{
         //encodes the given instruction string to an ouput base
         return _encodeInstruction(instructionStr, outputBase);
@@ -517,50 +511,5 @@ public class InstructionEncoder {
         initInfo();
     }
 
-
-    private static int run_tests(){
-        //creating File instance to reference text file in Java
-        File text = new File("C:\\Users\\omnic\\OneDrive\\Documents\\Coding Misc\\sample_instr.txt");
-     
-        //Creating Scanner instance to read File in Java
-        Scanner scnr;
-        try {
-            scnr = new Scanner(text);
-        } catch (FileNotFoundException e) {
-            print("Could not find file!!!");
-            return 1;
-        }
-
-        InstructionEncoder instrEncder = new InstructionEncoder();
-     
-        //Reading each line of instruction file to test instruction
-        int lineNumber = 1;
-        while(scnr.hasNextLine()){
-            String line = scnr.nextLine();
-            String output = "";
-            try {
-                output = instrEncder.encodeInstruction(line);
-            } catch(Exception e){
-                output = e.getMessage();
-            }
-            print("===========================");
-            print("Input: "+line);
-            print("Output:");
-            print(output);
-            print("===========================");
-        }
-        return 0;
-
-    }
-
-    public static void test_encoder(String instr){
-        InstructionEncoder instrEncder = new InstructionEncoder();
-        try {
-            String output = instrEncder.encodeInstruction(instr);
-            print(output);
-        } catch(InstException e){
-            print(e.getMessage());
-        }
-    }
 
 }

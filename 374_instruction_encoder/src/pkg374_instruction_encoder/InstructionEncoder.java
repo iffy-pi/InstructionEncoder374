@@ -80,7 +80,7 @@ public class InstructionEncoder {
 
     private void initInstructionGroups(){
         instructionGroups = new HashMap<InstructionType, String[]>();
-        instructionGroups.put(InstructionType.THREE_REGS, new String[]{"add","sub","shr","shl","ror","rol","and","or"});
+        instructionGroups.put(InstructionType.THREE_REGS, new String[]{"add","sub","shr","shl","ror","rol","and","or", "shra"});
         instructionGroups.put(InstructionType.TWO_REGS, new String[]{"mul", "div", "neg", "not"});
         instructionGroups.put(InstructionType.ONE_REGS, new String[]{"jr", "jal", "in", "out", "mfhi", "mflo"});
         instructionGroups.put(InstructionType.TWO_REGS_AND_IMMEDIATE, new String[]{"andi", "addi", "ori"});
@@ -91,43 +91,65 @@ public class InstructionEncoder {
     }
 
     private void initInstrCodes(){
+        // Contains the opcodes for each instruction
+        String[][] opcodeArray = new String[][]{
+            { "add"   , "00011" },
+            { "sub"   , "00100" },
+            { "and"   , "00101" },
+            { "or"    , "00110" },
+            { "shr"   , "00111" },
+            { "shra"  , "01000" },
+            { "shl"   , "01001" },
+            { "ror"   , "01010" },
+            { "rol"   , "01011" },
+
+            { "addi"  , "01100" },
+            { "andi"  , "01101" },
+            { "ori"   , "01110" },
+
+            { "mul"   , "01111" },
+            { "div"   , "10000" },
+            { "neg"   , "10001" },
+            { "not"   , "10010" },
+
+            { "brzr"  , "10011" },
+            { "brnz"  , "10011" },
+            { "brmi"  , "10011" },
+            { "brpl"  , "10011" },
+
+            { "jr"    , "10100" },
+            { "jal"   , "10101" },
+
+            { "in"    , "10110" },
+            { "out"   , "10111" },
+            { "mfhi"  , "11000" },
+            { "mflo"  , "11001" },
+
+            { "nop"   , "11010" },
+            { "halt"  , "11011" }
+        };
+
+        
+        String[][] branchOpcodeArray = new String[][]{
+            { "brzr"  , "00"},
+            { "brnz"  , "01"},
+            { "brpl"  , "10"},
+            { "brmi"  , "11"}
+        };
+
         instrOpcodes = new HashMap<String, String>();
-        instrOpcodes.put("add","00011");
-        instrOpcodes.put("sub","00100");
-        instrOpcodes.put("shr","00101");
-        instrOpcodes.put("shl","00110");
-        instrOpcodes.put("ror","00111");
-        instrOpcodes.put("rol","01000");
-        instrOpcodes.put("and","01001");
-        instrOpcodes.put("or","01010");
-        instrOpcodes.put("addi","01011");
-        instrOpcodes.put("andi","01100");
-        instrOpcodes.put("ori","01101");
-        instrOpcodes.put("mul","01110");
-        instrOpcodes.put("div","01111");
-        instrOpcodes.put("neg","10000");
-        instrOpcodes.put("not","10001");
-        instrOpcodes.put("jr","10011");
-        instrOpcodes.put("jal","10100");
-        instrOpcodes.put("in","10101");
-        instrOpcodes.put("out","10110");
-        instrOpcodes.put("mfhi","10111");
-        instrOpcodes.put("mflo","11000");
-        instrOpcodes.put("nop","11001");
-        instrOpcodes.put("halt","11010");
-        instrOpcodes.put("ld","00000");
-        instrOpcodes.put("ldi","00001");
-        instrOpcodes.put("st","00010");
-        instrOpcodes.put("brzr","10010");
-        instrOpcodes.put("brnz","10010");
-        instrOpcodes.put("brpl","10010");
-        instrOpcodes.put("brmi","10010");
+
+        for( int i=0; i < opcodeArray.length; i++){
+            // Add the opcodes to the hashmap
+            instrOpcodes.put(opcodeArray[i][0], opcodeArray[i][1]);
+        }
 
         branchInstrCodes = new HashMap<String, String>();
-        branchInstrCodes.put("brzr","0000");
-        branchInstrCodes.put("brnz","0001");
-        branchInstrCodes.put("brpl","0010");
-        branchInstrCodes.put("brmi","0011");
+
+        for( int i=0; i < branchOpcodeArray.length; i++){
+            // Add the branch opcodes to the hashmap
+            branchInstrCodes.put(branchOpcodeArray[i][0], branchOpcodeArray[i][1]);
+        }
     }
 
     private static boolean isElementInArray(String elem, String[] arr){
@@ -135,7 +157,7 @@ public class InstructionEncoder {
     }
 
     private InstructionType getInstrType(String instName){
-        //returns the instruction type if there is any, if not returns unknown 
+        // returns the instruction type if there is any, if not returns unknown 
         for (InstructionType t : instructionGroups.keySet()){
             if ( isElementInArray(instName, instructionGroups.get(t)) ) return t;
         }
@@ -196,18 +218,18 @@ public class InstructionEncoder {
     public static String decimalToBinary(Long number, int length){
         String padding_bit = (number >= 0) ? "0" : "1";
 
-        //get binary value for number
-        //if number is negative, it is padded with excess 1s
+        // get binary value for number
+        // if number is negative, it is padded with excess 1s
         String binStr = Long.toBinaryString(number);
 
         if (length != 0 && binStr.length() != length){
-            //need to add or remove characters
+            // need to add or remove characters
             if ( binStr.length() < length){
-                //pad it if it is less than required length
+                // pad it if it is less than required length
                 int org_length = binStr.length();
                 for(int i=1; i<= length-org_length; i++) binStr = padding_bit + binStr;
             } else {
-                //need to remove bits
+                // need to remove bits
                 binStr = binStr.substring(binStr.length() - length);
             }
         }
@@ -218,18 +240,18 @@ public class InstructionEncoder {
     public static String decimalToHex(Long number, int length){
         String padding_bit = (number >= 0) ? "0" : "f";
 
-        //get hex for number
-        //if number is negative, it is padded with extra fs
+        // get hex for number
+        // if number is negative, it is padded with extra fs
         String hexStr = Long.toHexString(number);
 
         if (length != 0 && hexStr.length() != length){
-            //need to add or remove characters
+            // need to add or remove characters
             if ( hexStr.length() < length){
-                //pad it if it is less than required length
+                // pad it if it is less than required length
                 int org_length = hexStr.length();
                 for(int i=1; i<= length-org_length; i++) hexStr = padding_bit + hexStr;
             } else {
-                //need to remove bits
+                // need to remove bits
                 hexStr = hexStr.substring(hexStr.length() - length);
             }
         }
@@ -238,22 +260,22 @@ public class InstructionEncoder {
     }
 
     private String makeInstructionFromParts(String[] instrParts, int outputBase) throws InstException{
-        //takes the input instruction parts and makes the output in the specified base
+        // takes the input instruction parts and makes the output in the specified base
         String full_encoded_instr = "";
         int bits_not_set = 32;
 
         String instrName = instrParts[0];
         String instrCout = instrParts[4];
 
-        //get the opcode for the instruction
+        // get the opcode for the instruction
         String opcode = instrOpcodes.get(instrName);
         if ( opcode == null) cannotEncodeInstruction(instrParts, InstException.ErrorType.PARSING_UNKOWN_INSTRUCTION);
 
-        //add it to the instruction
+        // add it to the instruction
         full_encoded_instr += opcode;
         bits_not_set -= 5;
 
-        //encode the registers if present
+        // encode the registers if present
         for (int i=1; i<=3; i++){
             if (!instrParts[i].equals("")){
                 full_encoded_instr += decimalToBinary( Long.parseLong(instrParts[i]), 4);
@@ -261,30 +283,30 @@ public class InstructionEncoder {
             }
         }
 
-        //branch has special case
-        if(instrName.equals("brzr") || instrName.equals("brnz") || instrName.equals("brpl") || instrName.equals("brmi")){
-            full_encoded_instr += branchInstrCodes.get(instrName);
+        // branch has special case, so if branch instruction
+        if ( opcode.equals( instrOpcodes.get("brzr") ) ) {
+            full_encoded_instr += "00" + branchInstrCodes.get(instrName);
             bits_not_set -= 4;
         }
 
-        //now handle cout if present
+        // now handle cout if present
         if ( !instrCout.equals("")){
-            //convert the cout to binary
+            // convert the cout to binary
             Long coutDecimal;
             if(instrCout.charAt(0) == '$'){
-                //the value is hex, so we convert it from hex first and then get binary representation
+                // the value is hex, so we convert it from hex first and then get binary representation
                 coutDecimal = Long.parseLong(instrCout.substring(1), 16);
             } else {
                 coutDecimal = Long.parseLong(instrCout);
             }
-            //it will then take up the remaining space
+            // it will then take up the remaining space
             String coutInInstr = decimalToBinary(coutDecimal, bits_not_set);
 
             full_encoded_instr += coutInInstr;
             bits_not_set -= coutInInstr.length();
         } else{
-            //no cout
-            //pad with 0s
+            // no cout
+            // pad with 0s
             String padding = "";
             for(int i=0; i<bits_not_set; i++){
                 padding = "0" + padding;
@@ -297,7 +319,7 @@ public class InstructionEncoder {
 
         if (outputBase != 2){
             if (outputBase == 16){
-                full_encoded_instr = decimalToHex( Long.parseLong(full_encoded_instr,2 ), 32/4).toUpperCase();
+                full_encoded_instr = decimalToHex( Long.parseLong(full_encoded_instr,2 ), 8).toUpperCase();
             } else throw new InstException(InstException.ErrorType.BAD_OUTPUT_BASE);
         }
 
@@ -305,25 +327,25 @@ public class InstructionEncoder {
     }
 
     private void prepPartsForEncoding(String[] instrParts){
-        //takes the parsed instruction string parts and applies any special instruction requirements
-        //InstrParts = [ inst, ra, rb, rc, c_out ]
-        //also strips registers to just raw values
+        // takes the parsed instruction string parts and applies any special instruction requirements
+        // InstrParts = [ inst, ra, rb, rc, c_out ]
+        // also strips registers to just raw values
 
-        //special behaviour for jal instruction:
+        // special behaviour for jal instruction:
         if ( instrParts[0].equals("jal") ){
-            //set rb and cout
+            // set rb and cout
             instrParts[2] = "r15";
             instrParts[4] = "1";
         }
 
-        //special behaviour for load and store
+        // special behaviour for load and store
         InstructionType type = getInstrType(instrParts[0]); 
         if (  type == InstructionType.LD_SPECIAL_CASE || type == InstructionType.ST_SPECIAL_CASE  ){
-            //if there is no rb, the default is adding to r0 for load and store
+            // if there is no rb, the default is adding to r0 for load and store
             if ( instrParts[2].equals("") ) instrParts[2] = "r0";
         }
 
-        //strip registers of the r
+        // strip registers of the r
         for (int i=1; i <= 3; i++){
             if(!instrParts[i].equals("")) instrParts[i] = instrParts[i].substring(1);
         }
@@ -335,12 +357,12 @@ public class InstructionEncoder {
 
         if (!m.find()) return new String[] {""};
 
-        //only the special cases are allowed to not match the entire string
+        // only the special cases are allowed to not match the entire string
         if ( !m.group(0).equals(searchstr)){
             if ( type != InstructionType.LD_SPECIAL_CASE || type != InstructionType.ST_SPECIAL_CASE ) return new String[] {""};
         }
 
-        //create the new string array that just has the matched parts
+        // create the new string array that just has the matched parts
         String[] groups = new String[m.groupCount()];
 
         for (int i=1; i <= m.groupCount(); i++){
@@ -360,14 +382,14 @@ public class InstructionEncoder {
     }
 
     private String[] parseInstruction(String instructionStr) throws InstException{
-        //parses the 
+        // parses the 
         instructionStr = instructionStr.strip();
 
         if ( instructionStr.equals("") ) throw new InstException(InstException.ErrorType.EMPTY_INSTRUCTION);
 
         String instName = instructionStr.split(" ")[0];
 
-        //get the group for the instruction to get the parsing regex
+        // get the group for the instruction to get the parsing regex
         InstructionType curType = getInstrType(instName);
 
         if ( curType == InstructionType.UNKNOWN_TYPE ) cannotParseInstruction(instName, InstException.ErrorType.PARSING_UNKOWN_INSTRUCTION);
@@ -379,26 +401,26 @@ public class InstructionEncoder {
 
         if (groups.length == 0) cannotParseInstruction(instructionStr, InstException.ErrorType.PARSING_BAD_FORMAT);
 
-        //if we can parse it then handle the args based on the current type
-        //values for          RA,  RB, RC
+        // if we can parse it then handle the args based on the current type
+        // values for          RA,  RB, RC
         String[] regArray = { "" , "", "" };
         String Cout = "";
 
-        //make them all lowercase
+        // make them all lowercase
         for (int i=0; i<groups.length; i++){
             groups[i] = groups[i].toLowerCase();
         }
 
-        //check if we got the instruction right
+        // check if we got the instruction right
         if ( !groups[0].equals(instName) )  cannotParseInstruction(instructionStr, InstException.ErrorType.PARSING_BAD_FORMAT);
 
-        //only registers case
+        // only registers case
         if ( curType == InstructionType.THREE_REGS || curType == InstructionType.TWO_REGS || curType == InstructionType.ONE_REGS || curType == InstructionType.NO_OPS){
-            //in this groups would be [ inst, ra, rb, rc]
-            //where ra, rb, rc are dependent on the type
+            // in this groups would be [ inst, ra, rb, rc]
+            // where ra, rb, rc are dependent on the type
 
-            //use the register count (group count -1) to determine if the instruction is valid for the type
-            //that is, if it has the required number of registers
+            // use the register count (group count -1) to determine if the instruction is valid for the type
+            // that is, if it has the required number of registers
             switch(groups.length-1){
                 case 0:
                     if ( curType != InstructionType.NO_OPS) cannotParseInstruction(instructionStr, InstException.ErrorType.PARSING_INCORRECT_ARGUMENT_COUNT);
@@ -413,23 +435,23 @@ public class InstructionEncoder {
                     if ( curType != InstructionType.THREE_REGS) cannotParseInstruction(instructionStr, InstException.ErrorType.PARSING_INCORRECT_ARGUMENT_COUNT);
                     break;
                 default:
-                    //any other value is not allowed
+                    // any other value is not allowed
                     cannotParseInstruction(instructionStr, InstException.ErrorType.PARSING_INCORRECT_ARGUMENT_COUNT);
                     break;
             }
 
-            //go through the groups and populate register
+            // go through the groups and populate register
             for (int i=1; i < groups.length; i++){
                 regArray[i-1] = groups[i];
             }
         }
 
-        //immediate value
+        // immediate value
         if ( curType == InstructionType.TWO_REGS_AND_IMMEDIATE || curType == InstructionType.ONE_REGS_AND_IMMEDIATE ){
-            //group is [ inst, ra, cout] or [inst ra, rb, cout]
+            // group is [ inst, ra, cout] or [inst ra, rb, cout]
             // where rb is dependent on type
 
-            //check the group arguments again (sans instruction)
+            // check the group arguments again (sans instruction)
             switch(groups.length-1){
                 case 2:
                     if ( curType != InstructionType.ONE_REGS_AND_IMMEDIATE) cannotParseInstruction(instructionStr, InstException.ErrorType.PARSING_INCORRECT_ARGUMENT_COUNT);
@@ -438,49 +460,49 @@ public class InstructionEncoder {
                     if ( curType != InstructionType.TWO_REGS_AND_IMMEDIATE) cannotParseInstruction(instructionStr, InstException.ErrorType.PARSING_INCORRECT_ARGUMENT_COUNT);
                     break;
                 default:
-                    //any other value is not allowed
+                    // any other value is not allowed
                     cannotParseInstruction(instructionStr, InstException.ErrorType.PARSING_INCORRECT_ARGUMENT_COUNT);
                     break;
             }
 
-            //get our registers
+            // get our registers
             // groups sans inst, sans cout
             for(int i=1; i <= groups.length-2; i++){
                 regArray[i-1] = groups[i];
             }
 
-            //get our cout value, always the last one
+            // get our cout value, always the last one
             Cout = groups[ groups.length-1];
         }
 
         else if ( curType == InstructionType.LD_SPECIAL_CASE ){
-            //ld Ra, C or ld Ra, C(Rb) (applies for ldi as well)
-            //groups could be [inst, Ra, C, "", ""] and [inst, Ra, C, (Rb), Rb]
+            // ld Ra, C or ld Ra, C(Rb) (applies for ldi as well)
+            // groups could be [inst, Ra, C, "", ""] and [inst, Ra, C, (Rb), Rb]
 
-            //ra and c must always be present, raise exception if they are not
+            // ra and c must always be present, raise exception if they are not
             if ( groups[1].equals("") ||  groups[2].equals("") ) cannotParseInstruction(instructionStr, InstException.ErrorType.PARSING_INCORRECT_ARGUMENT_COUNT);
 
-            //get our always present values
+            // get our always present values
             regArray[0] = groups[1];
             Cout = groups[2];
 
-            //if we have the rb argument take it
+            // if we have the rb argument take it
             if ( !groups[3].equals("") && groups[3].equals("("+groups[4]+")")) regArray[1] = groups[4];
 
         } 
 
         else if ( curType == InstructionType.ST_SPECIAL_CASE ){
-            //st C, Ra or st C(Rb), Ra
+            // st C, Ra or st C(Rb), Ra
             // [ inst, c, "", "", ra] or [ inst, c, (rb), rb, ra]
 
-            //ra and c must always be present, raise exception if they are not
+            // ra and c must always be present, raise exception if they are not
             if ( groups[1].equals("") ||  groups[4].equals("") ) cannotParseInstruction(instructionStr, InstException.ErrorType.PARSING_INCORRECT_ARGUMENT_COUNT);
 
-            //get our always present values
+            // get our always present values
             regArray[0] = groups[4];
             Cout = groups[1];
 
-            //if we have the rb argument take it
+            // if we have the rb argument take it
             if ( !groups[2].equals("") && groups[2].equals("("+groups[3]+")")) regArray[1] = groups[3];
         }
 
@@ -488,22 +510,22 @@ public class InstructionEncoder {
     }
 
     private String _encodeInstruction(String instructionStr, int outputBase) throws InstException{
-        //parse the instruction
-        //returns array in format:
+        // parse the instruction
+        // returns array in format:
         //[ instruction name, ra, rb, rc, c_out]
-        //if the registers do not exist then they will be empty string
+        // if the registers do not exist then they will be empty string
         String[] instrParts = parseInstruction(instructionStr);
         prepPartsForEncoding(instrParts);
         return makeInstructionFromParts(instrParts, outputBase);
     }
 
     public String encodeInstruction(String instructionStr, int outputBase) throws InstException{
-        //encodes the given instruction string to an ouput base
+        // encodes the given instruction string to an ouput base
         return _encodeInstruction(instructionStr, outputBase);
     }
 
     public String encodeInstruction(String instructionStr) throws InstException{
-        //encodes the given instruction string to an ouput base
+        // encodes the given instruction string to an ouput base
         return _encodeInstruction(instructionStr, 16);
     }
 

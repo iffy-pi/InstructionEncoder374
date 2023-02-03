@@ -9,10 +9,12 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.HashMap;
 import static javax.swing.JOptionPane.showMessageDialog;
+import pkg374_instruction_encoder.UsageInstructions;
+import java.awt.datatransfer.StringSelection;
+import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
+import java.awt.event.MouseEvent;
 
 /**
  *
@@ -36,35 +38,21 @@ public class BulkInstFrame extends javax.swing.JFrame {
     }
     
     public String getInfo(){
-        return "Type in instructions separated by newlines:\n"+
-                "ld r8, $27(r15)\n"+
-                "add r6, r7, r1\n\n"+
-
-                "And they will be encoded and displayed\nin the order they appear:\n"+
-                "0C780027\n" +
-                "1B388000\n\n"+
-
-                "Use ; for comments\n"+
-                "For lines that are only comments (beginning with ;), they will be just be passed through to output.\n"+
-                "For example:\n" +
-                ";ORG 0:\n"+
-                "ldi r8, $27(r15);for my code\n\n"+
-
-                "Machine Encoding Translation:\n"+
-                "ORG 0:\n"+
-                "0C780027 ;for my code\n\n"+
-
-                "Checkbox option removes all appended comments, not comment lines (ie beginning with ;)\n\n"+
-
-                "This message will disappear once you encode instructions\n"+
-                "See again using Clear button";
+        return "Encoded Instructions will appear here.\nSelect text and copy with left click.";
                         
+    }
+    
+    private void copyStringtoClipboard(String text){
+        StringSelection stringSelection = new StringSelection(text);
+        Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+        clipboard.setContents(stringSelection, null);
     }
         
     public void bulkEncode(){
         
         //String men = "add r1, r2, r3\nldi r6, $29(r7)";
         int lineCnt = 0;
+        boolean errorsHappened = false;
         String commentChar = ";";
         if(inputArea.getText().equals("")){
             showMessageDialog(this, "No instruction to encode");
@@ -128,10 +116,10 @@ public class BulkInstFrame extends javax.swing.JFrame {
                         } else {
                            encoded_instr = instrEncoder.encodeInstruction(curlineInst);
                         }
-                        output.add( encoded_instr +  ((outputComment.equals("")) ? "" : " "+commentChar + outputComment ) );
+                        output.add( encoded_instr +  ((outputComment.equals("")) ? "" : " "+commentChar + " " + outputComment ) );
                     } catch (InstException e){
                         //if an exception occured, add the curlineInst as a comment with the exception message
-
+                        errorsHappened = true;
                         output.add(commentChar+"ENCODING ERROR: "+curlineInst +", "+e.getMessage() );
                     }
                 }
@@ -142,6 +130,10 @@ public class BulkInstFrame extends javax.swing.JFrame {
                         + e.getMessage()+"\n"
                         +"Are you sure your format is correct?";
                 showMessageDialog(this, info);
+            }
+            
+            if ( errorsHappened ){
+                showMessageDialog(this, "Some instructions had encoding errors. Check output pane for more info.");
             }
         }
         
@@ -165,11 +157,15 @@ public class BulkInstFrame extends javax.swing.JFrame {
         
         inputArea.setText(empty);
         
-       
+       outputWindowLabel.setText("How to Use:");
        outputArea.setText(getInfo());
     }
     
     public void setInstrFormat(){
+        if ( nameField.getText().equals("") ) {
+            formatField.setText("Search instruction...");
+            return;
+        }
         formatField.setText( instrEncoder.getInstrFormat(nameField.getText().toLowerCase().split(" ")[0]));
     }
     
@@ -198,7 +194,7 @@ public class BulkInstFrame extends javax.swing.JFrame {
         inputArea = new javax.swing.JTextArea();
         jScrollPane4 = new javax.swing.JScrollPane();
         outputArea = new javax.swing.JTextArea();
-        jLabel2 = new javax.swing.JLabel();
+        outputWindowLabel = new javax.swing.JLabel();
         jScrollPane3 = new javax.swing.JScrollPane();
         formatField = new javax.swing.JTextArea();
         jLabel9 = new javax.swing.JLabel();
@@ -208,6 +204,7 @@ public class BulkInstFrame extends javax.swing.JFrame {
         jSeparator3 = new javax.swing.JSeparator();
         includeComments = new javax.swing.JCheckBox();
         includeInst = new javax.swing.JCheckBox();
+        howToUseBtn = new javax.swing.JButton();
 
         jTextField1.setText("jTextField1");
 
@@ -249,6 +246,7 @@ public class BulkInstFrame extends javax.swing.JFrame {
         jLabel7.setToolTipText("");
 
         inputArea.setColumns(20);
+        inputArea.setFont(new java.awt.Font("Consolas", 0, 13)); // NOI18N
         inputArea.setRows(5);
         inputArea.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
@@ -259,20 +257,33 @@ public class BulkInstFrame extends javax.swing.JFrame {
 
         outputArea.setEditable(false);
         outputArea.setColumns(20);
+        outputArea.setFont(new java.awt.Font("Consolas", 0, 13)); // NOI18N
         outputArea.setLineWrap(true);
         outputArea.setRows(5);
+        outputArea.setCursor(new java.awt.Cursor(java.awt.Cursor.TEXT_CURSOR));
+        outputArea.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseReleased(java.awt.event.MouseEvent evt) {
+                outputAreaMouseReleased(evt);
+            }
+        });
         jScrollPane4.setViewportView(outputArea);
 
-        jLabel2.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
-        jLabel2.setText("Machine Encoding:");
+        outputWindowLabel.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
+        outputWindowLabel.setText("Machine Encoding:");
+
+        jScrollPane3.setVerticalScrollBarPolicy(javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
 
         formatField.setEditable(false);
         formatField.setColumns(20);
+        formatField.setFont(new java.awt.Font("Consolas", 0, 14)); // NOI18N
         formatField.setRows(5);
+        formatField.setText("Search instruction...");
+        formatField.setPreferredSize(new java.awt.Dimension(172, 85));
         jScrollPane3.setViewportView(formatField);
 
         jLabel9.setText("Instruction format:");
 
+        nameField.setFont(new java.awt.Font("Consolas", 0, 14)); // NOI18N
         nameField.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 nameFieldActionPerformed(evt);
@@ -288,7 +299,7 @@ public class BulkInstFrame extends javax.swing.JFrame {
         jLabel3.setText("Instructions (Newline Separated):");
 
         jLabel4.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
-        jLabel4.setText("See Acceptable Formats Through Search");
+        jLabel4.setText("See Instruction Formats Through Search");
 
         includeComments.setText("Include Comments");
         includeComments.addActionListener(new java.awt.event.ActionListener() {
@@ -304,14 +315,45 @@ public class BulkInstFrame extends javax.swing.JFrame {
             }
         });
 
+        howToUseBtn.setText("How To Use");
+        howToUseBtn.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                howToUseBtnMouseClicked(evt);
+            }
+        });
+        howToUseBtn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                howToUseBtnActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(layout.createSequentialGroup()
+                .addGap(272, 272, 272)
+                .addComponent(title, javax.swing.GroupLayout.PREFERRED_SIZE, 240, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(299, Short.MAX_VALUE))
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                     .addGroup(layout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(jSeparator1))
+                    .addGroup(layout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(jSeparator3))
+                    .addGroup(layout.createSequentialGroup()
                         .addGap(21, 21, 21)
+                        .addComponent(jLabel1)
+                        .addGap(18, 18, 18)
+                        .addComponent(nameField, javax.swing.GroupLayout.PREFERRED_SIZE, 138, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(jLabel9)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 351, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
+                        .addGap(12, 12, 12)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(layout.createSequentialGroup()
                                 .addComponent(jLabel4)
@@ -319,55 +361,33 @@ public class BulkInstFrame extends javax.swing.JFrame {
                             .addComponent(jSeparator2)
                             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(jLabel3)
                                     .addGroup(layout.createSequentialGroup()
-                                        .addComponent(jLabel3)
-                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                                    .addGroup(layout.createSequentialGroup()
-                                        .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 234, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                        .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 251, javax.swing.GroupLayout.PREFERRED_SIZE)
                                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                             .addGroup(layout.createSequentialGroup()
-                                                .addGap(0, 10, Short.MAX_VALUE)
+                                                .addGap(18, 18, 18)
                                                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                                                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                                            .addComponent(encodeBtn, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 148, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                            .addComponent(clearBtn, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 148, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                            .addComponent(includeComments, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 148, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                                        .addGap(20, 20, 20))
-                                                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                                                        .addComponent(HBCombo, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                        .addGap(67, 67, 67))
-                                                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                                                        .addComponent(jLabel7)
-                                                        .addGap(42, 42, 42))))
+                                                    .addComponent(includeInst, javax.swing.GroupLayout.PREFERRED_SIZE, 162, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                                                        .addComponent(includeComments, javax.swing.GroupLayout.PREFERRED_SIZE, 148, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                        .addComponent(clearBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 148, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                        .addComponent(encodeBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 148, javax.swing.GroupLayout.PREFERRED_SIZE))))
                                             .addGroup(layout.createSequentialGroup()
-                                                .addComponent(includeInst, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)))))
+                                                .addGap(52, 52, 52)
+                                                .addComponent(HBCombo, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                            .addGroup(layout.createSequentialGroup()
+                                                .addGap(38, 38, 38)
+                                                .addComponent(jLabel7)))))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(jLabel2)
-                                    .addComponent(jScrollPane4, javax.swing.GroupLayout.PREFERRED_SIZE, 245, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addGap(13, 13, 13))))
-                    .addGroup(layout.createSequentialGroup()
-                        .addContainerGap()
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jSeparator1, javax.swing.GroupLayout.Alignment.TRAILING)
-                            .addComponent(jSeparator3))))
-                .addContainerGap())
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                .addGap(15, 15, 15)
-                .addComponent(jLabel1)
-                .addGap(18, 18, 18)
-                .addComponent(nameField, javax.swing.GroupLayout.PREFERRED_SIZE, 138, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabel9)
-                    .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 351, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(19, 19, 19))
-            .addGroup(layout.createSequentialGroup()
-                .addGap(251, 251, 251)
-                .addComponent(title, javax.swing.GroupLayout.PREFERRED_SIZE, 240, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                    .addGroup(layout.createSequentialGroup()
+                                        .addComponent(outputWindowLabel)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                        .addComponent(howToUseBtn)
+                                        .addGap(0, 0, Short.MAX_VALUE))
+                                    .addComponent(jScrollPane4))))))
+                .addGap(13, 13, 13))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -379,8 +399,9 @@ public class BulkInstFrame extends javax.swing.JFrame {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel3)
-                    .addComponent(jLabel2))
-                .addGap(8, 8, 8)
+                    .addComponent(outputWindowLabel)
+                    .addComponent(howToUseBtn))
+                .addGap(7, 7, 7)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                         .addComponent(jScrollPane4, javax.swing.GroupLayout.DEFAULT_SIZE, 261, Short.MAX_VALUE)
@@ -392,27 +413,26 @@ public class BulkInstFrame extends javax.swing.JFrame {
                         .addComponent(HBCombo, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(19, 19, 19)
                         .addComponent(encodeBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addGap(18, 18, 18)
                         .addComponent(clearBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 43, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(includeComments)
+                        .addComponent(includeComments, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(includeInst)))
-                .addGap(15, 15, 15)
-                .addComponent(jSeparator1, javax.swing.GroupLayout.PREFERRED_SIZE, 4, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(16, 16, 16)
+                .addComponent(jSeparator1, javax.swing.GroupLayout.PREFERRED_SIZE, 3, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jLabel4)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jSeparator3, javax.swing.GroupLayout.PREFERRED_SIZE, 4, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jLabel9)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGap(7, 7, 7)
+                .addComponent(jSeparator3, javax.swing.GroupLayout.PREFERRED_SIZE, 3, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 26, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                         .addComponent(nameField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addComponent(jLabel1)))
-                .addContainerGap(24, Short.MAX_VALUE))
+                        .addComponent(jLabel1)
+                        .addComponent(jLabel9))
+                    .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 24, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addContainerGap(8, Short.MAX_VALUE))
         );
 
         pack();
@@ -421,11 +441,12 @@ public class BulkInstFrame extends javax.swing.JFrame {
     private void encodeBtnMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_encodeBtnMouseClicked
         // TODO add your handling code here:
          bulkEncode();
+         outputWindowLabel.setText("Machine Encodings:");
     }//GEN-LAST:event_encodeBtnMouseClicked
 
     private void clearBtnMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_clearBtnMouseClicked
         // TODO add your handling code here:
-        
+        // set the output window label to instructions
         clear();
     }//GEN-LAST:event_clearBtnMouseClicked
 
@@ -455,6 +476,23 @@ public class BulkInstFrame extends javax.swing.JFrame {
         
     }//GEN-LAST:event_inputAreaMouseClicked
 
+    private void howToUseBtnMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_howToUseBtnMouseClicked
+        // TODO add your handling code here:
+        new UsageInstructions();
+    }//GEN-LAST:event_howToUseBtnMouseClicked
+
+    private void howToUseBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_howToUseBtnActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_howToUseBtnActionPerformed
+
+    private void outputAreaMouseReleased(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_outputAreaMouseReleased
+        // TODO add your handling code here:
+        if ( evt.getButton() == MouseEvent.BUTTON3 ){
+            copyStringtoClipboard(outputArea.getSelectedText());
+            showMessageDialog(this, "Selected text copied to clipboard");
+        }
+    }//GEN-LAST:event_outputAreaMouseReleased
+
     /**
      * @param args the command line arguments
      */
@@ -465,11 +503,11 @@ public class BulkInstFrame extends javax.swing.JFrame {
     private javax.swing.JButton clearBtn;
     private javax.swing.JButton encodeBtn;
     private javax.swing.JTextArea formatField;
+    private javax.swing.JButton howToUseBtn;
     private javax.swing.JCheckBox includeComments;
     private javax.swing.JCheckBox includeInst;
     private javax.swing.JTextArea inputArea;
     private javax.swing.JLabel jLabel1;
-    private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel7;
@@ -485,6 +523,7 @@ public class BulkInstFrame extends javax.swing.JFrame {
     private javax.swing.JTextPane jTextPane1;
     private javax.swing.JTextField nameField;
     private javax.swing.JTextArea outputArea;
+    private javax.swing.JLabel outputWindowLabel;
     private javax.swing.JLabel title;
     // End of variables declaration//GEN-END:variables
 }
